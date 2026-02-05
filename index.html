@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>vite-todo</title>
+</head>
+<body>
+<div id="offlineBanner" style="display: none; background-color: orange; color: white; padding: 10px; text-align: center;">
+    Offline-lage aktivt - sparar lokalt
+</div>
+<div id="offlineBanner" style="display: none; background-color: orange; color: white; padding: 10px; text-align: center;">
+    Offline-lage aktivt - sparar lokalt
+</div>
+<div id="userSection" style="margin-bottom: 20px; padding: 10px; background-color: lightgray;">
+    <label>Anvandarnamn: </label>
+    <input id="usernameInput" type="text" placeholder="Skriv ditt namn">
+    <button id="saveUsernameBtn">Spara</button>
+    <span id="usernameDisplay"></span>
+</div>
+<h1>Todo</h1>
+<input id="todoInput" type="text" placeholder="Skriv en todo">
+<input id="dueDateInput" type="datetime-local">
+<button id="addBtn">Lägg till</button>
+<ul id="todoList"></ul>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
