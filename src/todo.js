@@ -74,7 +74,7 @@ async function addTodo(text) {
     };
 
     try {
-        const response = await fetch("/todos", {
+        const response = await safeFetch("/todos", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -382,7 +382,7 @@ async function syncOfflineTodos() {
 
     for (const todoData of todosToSync) {
         try {
-            const response = await fetch("/todos", {
+            const response = await safeFetch("/todos", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -441,7 +441,7 @@ function saveTodos() {
 
 async function loadTodos() {
     try {
-        const response = await fetch("/todos");
+        const response = await safeFetch("/todos");
 
         if (!response.ok) {
             throw new Error("Servern svarade med fel");
@@ -461,7 +461,7 @@ async function loadTodos() {
 }
 
 async function updateTodo(todo) {
-    const response = await fetch(`/todos/${todo.id}`, {
+    const response = await safeFetch(`/todos/${todo.id}`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json"
@@ -477,7 +477,7 @@ async function updateTodo(todo) {
 }
 
 async function deleteTodo(id) {
-    const response = await fetch(`/todos/${id}`, {
+    const response = await safefetch(`/todos/${id}`, {
         method: "DELETE"
     });
 
@@ -485,6 +485,17 @@ async function deleteTodo(id) {
         throw new Error("Kunde inte ta bort todo");
     }
 }
+
+async function safeFetch(url, options) {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+    }
+    try {
+        return await res.json();
+    } catch {
+        throw new Error("Invalid JSON");
+    }
 
 function setCookie(name, value, days) {
     const maxAge = days * 24 * 60 * 60;
@@ -532,4 +543,3 @@ function saveUsername() {
 
 document.getElementById("saveUsernameBtn").addEventListener("click", saveUsername);
 displayUsername();
-

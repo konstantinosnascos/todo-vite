@@ -1,10 +1,54 @@
 {
   "todos": [
     {
-      "id": "5fa6",
+      "id": "0bae",
+      "text": "Test",
+      "completed": false,
+      "dueDate": "2026-02-19T10:54",
+      "description": "testar",
+      "checklist": [
+        {
+          "text": "1",
+          "done": false
+        },
+        {
+          "text": "2",
+          "done": false
+        },
+        {
+          "text": "3",
+          "done": false
+        },
+        {
+          "text": "4",
+          "done": false
+        }
+      ],
+      "expanded": false,
+      "isEditing": false
+    },
+    {
+      "id": "dee9",
+      "text": "Test 2",
+      "completed": false,
+      "dueDate": "2026-02-01T11:00",
+      "description": "",
+      "checklist": [],
+      "isEditing": false
+    },
+    {
+      "id": "1f66",
+      "text": "test offline",
+      "completed": false,
+      "dueDate": "2026-02-28T11:09",
+      "description": "",
+      "checklist": []
+    },
+    {
+      "id": "42cf",
       "text": "adsfdasf",
       "completed": false,
-      "dueDate": "2026-02-06T08:06",
+      "dueDate": null,
       "description": "",
       "checklist": []
     }
