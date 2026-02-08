@@ -494,13 +494,7 @@ function saveTodos() {
 }
 
 async function fetchTodosFromApi() {
-    const response = await fetch("/todos");
-
-    if (!response.ok) {
-        throw new Error("Servern svarade med fel");
-    }
-
-    return await response.json();
+    return await safeFetch("/todos");
 }
 
 function loadTodosFromCache() {
