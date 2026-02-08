@@ -531,7 +531,7 @@ async function updateTodo(todo) {
     return updatedTodo;
 }
 
-async function deleteTodo(id) {
+async function deleteTodoFromApi(id) {
     const response = await fetch(`/todos/${id}`, {
         method: "DELETE"
     });
@@ -539,6 +539,18 @@ async function deleteTodo(id) {
     if (!response.ok) {
         throw new Error("Kunde inte ta bort todo");
     }
+}
+
+function removeTodoFromState(id) {
+    const index = todos.findIndex(t => t.id === id);
+    if (index !== -1) {
+        todos.splice(index, 1);
+    }
+}
+
+async function deleteTodo(id) {
+    await deleteTodoFromApi(id);
+    removeTodoFromState(id);
 }
 
 function setCookie(name, value, days) {
