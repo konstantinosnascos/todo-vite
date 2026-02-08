@@ -388,6 +388,39 @@ function render () {
     });
 }
 
+async function syncSingleOfflineTodo(todoData) {
+    const response = await fetch("/todos", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(todoData)
+    });
+
+    if (!response.ok) {
+        throw new Error("Kunde inte synka todo");
+    }
+
+    return await response.json();
+}
+
+function removeFromOfflineQueue(todoData) {
+    const index = offlineQueue.findIndex(t => t.text === todoData.text);
+    if (index !== -1) {
+        offlineQueue.splice(index, 1);
+    }
+}
+
+function replaceOfflineTodo(savedTodo, originalTodo) {
+    const index = todos.findIndex(
+        t => t.offline && t.text === originalTodo.text
+    );
+
+    if (index !== -1) {
+        todos[index] = savedTodo;
+    }
+}
+
 async function syncOfflineTodos() {
     if (offlineQueue.length === 0) {
         return;
@@ -399,36 +432,16 @@ async function syncOfflineTodos() {
 
     for (const todoData of todosToSync) {
         try {
-            const response = await fetch("/todos", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(todoData)
-            });
-
-            if (response.ok) {
-                const savedTodo = await response.json();
-
-                // Ta bort fran kön
-                const queueIndex = offlineQueue.findIndex(t => t.text === todoData.text);
-                if (queueIndex !== -1) {
-                    offlineQueue.splice(queueIndex, 1);
-                }
-
-                // offline-todo
-                const todoIndex = todos.findIndex(t => t.offline && t.text === todoData.text);
-                if (todoIndex !== -1) {
-                    todos[todoIndex] = savedTodo;
-                }
-            }
+            const savedTodo = await syncSingleOfflineTodo(todoData);
+            removeFromOfflineQueue(todoData);
+            replaceOfflineTodo(savedTodo, todoData);
         } catch (error) {
             console.log("Kunde inte synka: " + todoData.text);
         }
     }
 
     saveOfflineQueue();
-    localStorage.setItem("todos-cache", JSON.stringify(todos));
+    saveTodosToCache(todos);
     render();
 }
 
