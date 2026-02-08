@@ -141,13 +141,23 @@ function addTodoToState(todo) {
     todos.push(todo);
 }
 
+function updateOfflineTodoStatus(tempId, status, retries) {
+    const todo = todos.find(t => t.id === tempId);
+    if (!todo) return;
+
+    todo.syncStatus = status;
+    todo.retries = retries;
+}
+
 function queueOfflineTodo(todo) {
     const tempId = "temp-" + Date.now();
 
     const offlineTodo = {
         ...todo,
         id: tempId,
-        offline: true
+        offline: true,
+        syncStatus: "pending",
+        retries: 0
     };
 
     addTodoToState(offlineTodo);
@@ -277,8 +287,26 @@ function render () {
             }
 
             if (todo.offline) {
-                span.textContent = displayText + " (Ej synkad)";
+                let statusText = "Ej synkad";
+
+                if (todo.syncStatus === "syncing") {
+                    statusText = "Synkar...";
+                } else if (todo.syncStatus === "error") {
+                    statusText = `Misslyckades (${todo.retries}/3)`;
+                }
+
+                span.textContent = displayText + " (" + statusText + ")";
                 span.style.color = "orange";
+                if (todo.offline && todo.syncStatus === "error") {
+                    const retryBtn = document.createElement("button");
+                    retryBtn.textContent = "Försök igen";
+
+                    retryBtn.addEventListener("click", function () {
+                        syncOfflineTodos();
+                    });
+
+                    li.appendChild(retryBtn);
+                }
             } else {
                 span.textContent = displayText;
             }
@@ -469,13 +497,21 @@ async function syncOfflineTodos() {
         const item = offlineQueue[i];
 
         try {
+            updateOfflineTodoStatus(item.id, "syncing", item.retries);
             const savedTodo = await syncSingleOfflineTodo(item);
             replaceOfflineTodoById(savedTodo, item.id);
+            savedTodo.syncStatus = "synced";
 
             offlineQueue.splice(i, 1);
             i--;
         } catch (error) {
             item.retries += 1;
+
+            updateOfflineTodoStatus(
+                item.id,
+                "error",
+                item.retries
+            );
 
             if (item.retries >= 3) {
                 console.error("Ger upp synk för:", item.payload.text);
