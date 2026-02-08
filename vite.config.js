@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite'
-import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
     server: {
@@ -9,12 +8,5 @@ export default defineConfig({
                 changeOrigin: true
             }
         }
-    },
-    plugins: [
-        VitePWA({
-            strategies: 'injectManifest',
-            srcDir: 'src',
-            filename: 'service-worker.js',
-        })
-    ]
+    }
 })

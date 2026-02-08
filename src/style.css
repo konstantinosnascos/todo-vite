@@ -1,8 +1,7 @@
-* {
+{
     box-sizing: border-box;
     font-family: Arial, sans-serif;
 }
-
 body {
     max-width: 600px;
     margin: 0 auto;
