@@ -515,19 +515,13 @@ async function loadTodos() {
 }
 
 async function putTodoToApi(todo) {
-    const response = await fetch(`/todos/${todo.id}`, {
+    return await safeFetch(`/todos/${todo.id}`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json"
         },
         body: JSON.stringify(todo)
     });
-
-    if (!response.ok) {
-        throw new Error("Kunde inte uppdatera todo");
-    }
-
-    return await response.json();
 }
 
 function updateTodoInState(updatedTodo) {
@@ -544,13 +538,9 @@ async function updateTodo(todo) {
 }
 
 async function deleteTodoFromApi(id) {
-    const response = await fetch(`/todos/${id}`, {
+    await safeFetch(`/todos/${id}`, {
         method: "DELETE"
     });
-
-    if (!response.ok) {
-        throw new Error("Kunde inte ta bort todo");
-    }
 }
 
 function removeTodoFromState(id) {
