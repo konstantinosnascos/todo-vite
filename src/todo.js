@@ -502,7 +502,7 @@ async function loadTodos() {
     }
 }
 
-async function updateTodo(todo) {
+async function putTodoToApi(todo) {
     const response = await fetch(`/todos/${todo.id}`, {
         method: "PUT",
         headers: {
@@ -516,6 +516,19 @@ async function updateTodo(todo) {
     }
 
     return await response.json();
+}
+
+function updateTodoInState(updatedTodo) {
+    const index = todos.findIndex(t => t.id === updatedTodo.id);
+    if (index !== -1) {
+        todos[index] = updatedTodo;
+    }
+}
+
+async function updateTodo(todo) {
+    const updatedTodo = await putTodoToApi(todo);
+    updateTodoInState(updatedTodo);
+    return updatedTodo;
 }
 
 async function deleteTodo(id) {
