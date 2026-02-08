@@ -29,7 +29,15 @@ export async function setupTodo() {
 
         await loadTodos();
     } catch (error) {
-        errorMessage = error.message;
+        const type = classifyError(error);
+
+        if (type === "OFFLINE") {
+            errorMessage = "Du är offline. Visar sparad data.";
+        } else if (type === "SERVER") {
+            errorMessage = "Servern svarar inte just nu.";
+        } else {
+            errorMessage = "Ett oväntat fel inträffade.";
+        }
     } finally {
         isLoading = false;
         render();
@@ -59,6 +67,26 @@ async function handleAddClick() {
     } catch (error) {
         console.error("Fel vid skapande:", error);
     }
+}
+
+function classifyError(error) {
+    if (!error || !error.message) {
+        return "UNKNOWN";
+    }
+
+    if (error.message === "NETWORK_ERROR") {
+        return "OFFLINE";
+    }
+
+    if (error.message.startsWith("HTTP_ERROR_")) {
+        return "SERVER";
+    }
+
+    if (error.message === "INVALID_JSON") {
+        return "DATA";
+    }
+
+    return "UNKNOWN";
 }
 
 async function safeFetch(url, options = {}) {
