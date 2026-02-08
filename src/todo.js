@@ -28,6 +28,7 @@ export async function setupTodo() {
         render();
 
         await loadTodos();
+        syncOfflineTodos();
     } catch (error) {
         const type = classifyError(error);
 
@@ -49,7 +50,6 @@ export async function setupTodo() {
     window.addEventListener("offline", updateOnlineStatus);
     window.addEventListener("online", updateOnlineStatus);
     updateOnlineStatus();
-    syncOfflineTodos();
 }
 
 function handleEnterKey(event) {
@@ -143,10 +143,21 @@ function addTodoToState(todo) {
 
 function queueOfflineTodo(todo) {
     const tempId = "temp-" + Date.now();
-    const offlineTodo = { ...todo, id: tempId, offline: true };
+
+    const offlineTodo = {
+        ...todo,
+        id: tempId,
+        offline: true
+    };
 
     addTodoToState(offlineTodo);
-    offlineQueue.push(todo);
+
+    offlineQueue.push({
+        id: tempId,
+        payload: JSON.parse(JSON.stringify(todo)),
+        retries: 0
+    });
+
     saveOfflineQueue();
 }
 
@@ -435,55 +446,40 @@ function render () {
     });
 }
 
-async function syncSingleOfflineTodo(todoData) {
-    const response = await fetch("/todos", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(todoData)
-    });
-
-    if (!response.ok) {
-        throw new Error("Kunde inte synka todo");
-    }
-
-    return await response.json();
+async function syncSingleOfflineTodo(queueItem) {
+    return await postTodoToApi(queueItem.payload);
 }
 
-function removeFromOfflineQueue(todoData) {
-    const index = offlineQueue.findIndex(t => t.text === todoData.text);
+function removeFromOfflineQueueById(id) {
+    const index = offlineQueue.findIndex(item => item.id === id);
     if (index !== -1) {
         offlineQueue.splice(index, 1);
     }
 }
 
-function replaceOfflineTodo(savedTodo, originalTodo) {
-    const index = todos.findIndex(
-        t => t.offline && t.text === originalTodo.text
-    );
-
+function replaceOfflineTodoById(savedTodo, tempId) {
+    const index = todos.findIndex(t => t.id === tempId);
     if (index !== -1) {
         todos[index] = savedTodo;
     }
 }
 
 async function syncOfflineTodos() {
-    if (offlineQueue.length === 0) {
-        return;
-    }
+    for (let i = 0; i < offlineQueue.length; i++) {
+        const item = offlineQueue[i];
 
-    console.log("Synkar " + offlineQueue.length + " todos till backend");
-
-    const todosToSync = [...offlineQueue];
-
-    for (const todoData of todosToSync) {
         try {
-            const savedTodo = await syncSingleOfflineTodo(todoData);
-            removeFromOfflineQueue(todoData);
-            replaceOfflineTodo(savedTodo, todoData);
+            const savedTodo = await syncSingleOfflineTodo(item);
+            replaceOfflineTodoById(savedTodo, item.id);
+
+            offlineQueue.splice(i, 1);
+            i--;
         } catch (error) {
-            console.log("Kunde inte synka: " + todoData.text);
+            item.retries += 1;
+
+            if (item.retries >= 3) {
+                console.error("Ger upp synk för:", item.payload.text);
+            }
         }
     }
 
