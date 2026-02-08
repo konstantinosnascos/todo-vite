@@ -49,6 +49,7 @@ export async function setupTodo() {
     window.addEventListener("offline", updateOnlineStatus);
     window.addEventListener("online", updateOnlineStatus);
     updateOnlineStatus();
+    syncOfflineTodos();
 }
 
 function handleEnterKey(event) {
@@ -536,8 +537,18 @@ async function loadTodos() {
     try {
         todos = await fetchTodosFromApi();
         saveTodosToCache(todos);
+        errorMessage = "";
     } catch (error) {
-        console.log("Kunde inte nå servern, använder cache");
+        const type = classifyError(error);
+
+        if (type === "OFFLINE") {
+            errorMessage = "Du är offline. Visar sparad data.";
+        } else if (type === "SERVER") {
+            errorMessage = "Servern har problem. Visar sparad data.";
+        } else {
+            errorMessage = "Kunde inte ladda data.";
+        }
+
         todos = loadTodosFromCache();
     }
 }
