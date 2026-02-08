@@ -372,7 +372,6 @@ function render () {
             deleteBtn.addEventListener("click", async function () {
                 try {
                     await deleteTodo(todo.id);
-                    todos.splice(index, 1);
                 } catch (error) {
                     console.error("Fel vid borttagning:", error);
                 }
