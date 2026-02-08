@@ -99,19 +99,13 @@ function createTodoObject(text) {
 }
 
 async function postTodoToApi(todo) {
-    const response = await fetch("/todos", {
+    return await safeFetch("/todos", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
         body: JSON.stringify(todo)
     });
-
-    if (!response.ok) {
-        throw new Error("Kunde inte skapa todo");
-    }
-
-    return await response.json();
 }
 
 function addTodoToState(todo) {
