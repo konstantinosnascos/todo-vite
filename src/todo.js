@@ -1,7 +1,4 @@
-//todo.js
-
 let offlineQueue = [];
-
 
 function delay(ms) {
     return new Promise(resolve => {
@@ -12,8 +9,12 @@ function delay(ms) {
 let isLoading = false;
 let errorMessage = "";
 
-
 let todos = [];
+
+// Pagination variabler
+let page = 0;
+const PAGE_SIZE = 10;
+let allTodosLoaded = false;
 
 const input = document.getElementById("todoInput");
 const addBtn = document.getElementById("addBtn");
@@ -33,15 +34,29 @@ export async function setupTodo() {
         const type = classifyError(error);
 
         if (type === "OFFLINE") {
-            errorMessage = "Du är offline. Visar sparad data.";
+            errorMessage = "Du ar offline. Visar sparad data.";
         } else if (type === "SERVER") {
             errorMessage = "Servern svarar inte just nu.";
         } else {
-            errorMessage = "Ett oväntat fel inträffade.";
+            errorMessage = "Ett ovantat fel intraffade.";
         }
     } finally {
         isLoading = false;
         render();
+    }
+
+    // IntersectionObserver for lazy loading
+    const observer = new IntersectionObserver(
+        (entries) => {
+            if (entries[0].isIntersecting) {
+                loadMoreTodos();
+            }
+        }
+    );
+
+    const trigger = document.querySelector("#load-trigger");
+    if (trigger) {
+        observer.observe(trigger);
     }
 
     addBtn.addEventListener("click", handleAddClick);
@@ -86,6 +101,7 @@ function classifyError(error) {
     if (error.message === "INVALID_JSON") {
         return "DATA";
     }
+
     if (error.message === "SW_FALLBACK") {
         return "OFFLINE";
     }
@@ -181,15 +197,315 @@ async function addTodo(text) {
         const savedTodo = await postTodoToApi(todo);
         addTodoToState(savedTodo);
     } catch (error) {
-        console.log("Offline - sparar i kö");
+        console.log("Offline - sparar i ko");
         queueOfflineTodo(todo);
     }
 
     document.getElementById("dueDateInput").value = "";
-    render();
+    resetAndRender();
 }
 
-function render () {
+function createTodoElement(todo) {
+    const li = document.createElement("li");
+
+    // Checkbox
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = todo.completed;
+
+    checkbox.addEventListener("change", async function() {
+        todo.completed = checkbox.checked;
+        try {
+            await updateTodo(todo);
+        } catch (error) {
+            console.error("Fel vid uppdatering:", error);
+        }
+        resetAndRender();
+    });
+
+    li.appendChild(checkbox);
+
+    if (todo.isEditing) {
+        const editInput = document.createElement("input");
+        editInput.type = "text";
+        editInput.value = todo.text;
+
+        const editDateInput = document.createElement("input");
+        editDateInput.type = "datetime-local";
+        if (todo.dueDate) {
+            editDateInput.value = todo.dueDate.slice(0, 16);
+        }
+
+        // Spara-knapp
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Spara";
+        saveBtn.addEventListener("click", async function() {
+            todo.text = editInput.value;
+            todo.dueDate = editDateInput.value || null;
+            todo.isEditing = false;
+            try {
+                await updateTodo(todo);
+            } catch (error) {
+                console.error("Fel vid uppdatering:", error);
+            }
+            resetAndRender();
+        });
+
+        // Avbryt-knapp
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "Avbryt";
+        cancelBtn.addEventListener("click", function() {
+            todo.isEditing = false;
+            resetAndRender();
+        });
+
+        // Enter sparar, Escape avbryter
+        editInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                saveBtn.click();
+            }
+            if (event.key === "Escape") {
+                cancelBtn.click();
+            }
+        });
+
+        li.appendChild(editInput);
+        li.appendChild(editDateInput);
+        li.appendChild(saveBtn);
+        li.appendChild(cancelBtn);
+    } else {
+        // Text span
+        const span = document.createElement("span");
+        span.style.cursor = "pointer";
+
+        let displayText = todo.text;
+
+        if (todo.dueDate) {
+            const date = new Date(todo.dueDate);
+            const formatted = date.toLocaleString("sv-SE");
+            displayText = displayText + " (Ska goras: " + formatted + ")";
+        }
+
+        if (todo.offline) {
+            let statusText = "Ej synkad";
+
+            if (todo.syncStatus === "syncing") {
+                statusText = "Synkar...";
+            } else if (todo.syncStatus === "error") {
+                statusText = "Misslyckades (" + todo.retries + "/3)";
+            }
+
+            span.textContent = displayText + " (" + statusText + ")";
+            span.style.color = "orange";
+
+            if (todo.syncStatus === "error") {
+                const retryBtn = document.createElement("button");
+                retryBtn.textContent = "Forsok igen";
+
+                retryBtn.addEventListener("click", function() {
+                    syncOfflineTodos();
+                });
+
+                li.appendChild(retryBtn);
+            }
+        } else {
+            span.textContent = displayText;
+        }
+
+        if (todo.completed) {
+            span.style.textDecoration = "line-through";
+            span.style.color = "gray";
+        }
+
+        // Expanderbar beskrivning
+        const detailsDiv = document.createElement("div");
+        detailsDiv.style.display = todo.expanded ? "block" : "none";
+        detailsDiv.style.marginLeft = "20px";
+        detailsDiv.style.marginTop = "5px";
+
+        const descriptionLabel = document.createElement("label");
+        descriptionLabel.textContent = "Beskrivning: ";
+
+        const descriptionInput = document.createElement("textarea");
+        descriptionInput.value = todo.description || "";
+        descriptionInput.rows = 3;
+        descriptionInput.style.width = "200px";
+
+        descriptionInput.addEventListener("change", async function() {
+            todo.description = descriptionInput.value;
+            try {
+                await updateTodo(todo);
+            } catch (error) {
+                console.error("Fel vid uppdatering:", error);
+            }
+        });
+
+        detailsDiv.appendChild(descriptionLabel);
+        detailsDiv.appendChild(descriptionInput);
+
+        // Checklista
+        const checklistDiv = document.createElement("div");
+        checklistDiv.style.marginTop = "10px";
+
+        const checklistLabel = document.createElement("strong");
+        checklistLabel.textContent = "Checklista:";
+        checklistDiv.appendChild(checklistLabel);
+
+        const checklistUl = document.createElement("ul");
+        checklistUl.style.listStyle = "none";
+        checklistUl.style.paddingLeft = "0";
+
+        if (!todo.checklist) {
+            todo.checklist = [];
+        }
+
+        todo.checklist.forEach(function(item, itemIndex) {
+            const itemLi = document.createElement("li");
+
+            const itemCheckbox = document.createElement("input");
+            itemCheckbox.type = "checkbox";
+            itemCheckbox.checked = item.done;
+
+            itemCheckbox.addEventListener("change", async function() {
+                todo.checklist[itemIndex].done = itemCheckbox.checked;
+                try {
+                    await updateTodo(todo);
+                } catch (error) {
+                    console.error("Fel vid uppdatering:", error);
+                }
+                resetAndRender();
+            });
+
+            const itemText = document.createElement("span");
+            itemText.textContent = item.text;
+            if (item.done) {
+                itemText.style.textDecoration = "line-through";
+                itemText.style.color = "gray";
+            }
+
+            const removeItemBtn = document.createElement("button");
+            removeItemBtn.textContent = "X";
+            removeItemBtn.style.marginLeft = "5px";
+
+            removeItemBtn.addEventListener("click", async function() {
+                todo.checklist.splice(itemIndex, 1);
+                try {
+                    await updateTodo(todo);
+                } catch (error) {
+                    console.error("Fel vid uppdatering:", error);
+                }
+                resetAndRender();
+            });
+
+            itemLi.appendChild(itemCheckbox);
+            itemLi.appendChild(itemText);
+            itemLi.appendChild(removeItemBtn);
+            checklistUl.appendChild(itemLi);
+        });
+
+        checklistDiv.appendChild(checklistUl);
+
+        // Lagg till ny punkt
+        const newItemInput = document.createElement("input");
+        newItemInput.type = "text";
+        newItemInput.placeholder = "Ny punkt...";
+
+        const addItemBtn = document.createElement("button");
+        addItemBtn.textContent = "Lagg till";
+
+        addItemBtn.addEventListener("click", async function() {
+            if (newItemInput.value === "") return;
+
+            todo.checklist.push({
+                text: newItemInput.value,
+                done: false
+            });
+
+            try {
+                await updateTodo(todo);
+            } catch (error) {
+                console.error("Fel vid uppdatering:", error);
+            }
+            resetAndRender();
+        });
+
+        newItemInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                addItemBtn.click();
+            }
+        });
+
+        checklistDiv.appendChild(newItemInput);
+        checklistDiv.appendChild(addItemBtn);
+
+        detailsDiv.appendChild(checklistDiv);
+
+        span.addEventListener("click", function() {
+            todo.expanded = !todo.expanded;
+            resetAndRender();
+        });
+
+        // Edit-knapp
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", function() {
+            todo.isEditing = true;
+            resetAndRender();
+        });
+
+        // Delete-knapp
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "X";
+
+        deleteBtn.addEventListener("click", async function() {
+            try {
+                await deleteTodo(todo.id);
+            } catch (error) {
+                console.error("Fel vid borttagning:", error);
+            }
+            resetAndRender();
+        });
+
+        li.appendChild(span);
+        li.appendChild(editBtn);
+        li.appendChild(deleteBtn);
+        li.appendChild(detailsDiv);
+    }
+
+    return li;
+}
+
+function renderTodos(todosToRender) {
+    todosToRender.forEach((todo) => {
+        const li = createTodoElement(todo);
+        list.appendChild(li);
+    });
+}
+
+function loadMoreTodos() {
+    if (allTodosLoaded) return;
+
+    const start = page * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const slice = todos.slice(start, end);
+
+    if (slice.length === 0) {
+        allTodosLoaded = true;
+        return;
+    }
+
+    renderTodos(slice);
+    page++;
+}
+
+function resetAndRender() {
+    page = 0;
+    allTodosLoaded = false;
+    list.innerHTML = "";
+    loadMoreTodos();
+}
+
+function render() {
     list.innerHTML = "";
 
     if (isLoading) {
@@ -207,274 +523,9 @@ function render () {
         return;
     }
 
-    todos.forEach((todo, index) => {
-        const li = document.createElement("li");
-
-        //checkbox
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = todo.completed;
-
-        checkbox.addEventListener("change", async function() {
-            todo.completed = checkbox.checked;
-            try {
-                await updateTodo(todo);
-            } catch (error) {
-                console.error("Fel vid uppdatering:", error);
-            }
-            render();
-        });
-
-        li.appendChild(checkbox);
-
-        if (todo.isEditing) {
-            const editInput = document.createElement("input");
-            editInput.type = "text";
-            editInput.value = todo.text;
-
-            const editDateInput = document.createElement("input");
-            editDateInput.type = "datetime-local";
-            if (todo.dueDate) {
-                editDateInput.value = todo.dueDate.slice(0, 16);
-            }
-
-            //Spara-knapp
-            const saveBtn = document.createElement("button");
-            saveBtn.textContent = "Spara";
-            saveBtn.addEventListener("click", async function() {
-                todo.text = editInput.value;
-                todo.dueDate = editDateInput.value || null;
-                todo.isEditing = false;
-                try {
-                    await updateTodo(todo);
-                } catch (error) {
-                    console.error("Fel vid uppdatering:", error);
-                }
-                render();
-            });
-
-            //cancelBtn
-            const cancelBtn = document.createElement("button");
-            cancelBtn.textContent = "Avbryt";
-            cancelBtn.addEventListener("click", function() {
-            todo.isEditing = false;
-            render();
-        });
-
-            //Enter sparar
-            editInput.addEventListener("keydown", function(event) {
-                if (event.key === "Enter") {
-                    saveBtn.click();
-                }
-                if (event.key === "Escape") {
-                    cancelBtn.click();
-                }
-            });
-
-            li.appendChild(editInput);
-            li.appendChild(editDateInput);
-            li.appendChild(saveBtn);
-            li.appendChild(cancelBtn);
-        } else {
-
-            //text
-            const span = document.createElement("span");
-            span.style.cursor = "pointer";
-
-            let displayText = todo.text;
-
-            if (todo.dueDate) {
-                const date = new Date(todo.dueDate);
-                const formatted = date.toLocaleString("sv-SE");
-                displayText = displayText + " (Ska göras: " + formatted + ")";
-            }
-
-            if (todo.offline) {
-                let statusText = "Ej synkad";
-
-                if (todo.syncStatus === "syncing") {
-                    statusText = "Synkar...";
-                } else if (todo.syncStatus === "error") {
-                    statusText = `Misslyckades (${todo.retries}/3)`;
-                }
-
-                span.textContent = displayText + " (" + statusText + ")";
-                span.style.color = "orange";
-                if (todo.offline && todo.syncStatus === "error") {
-                    const retryBtn = document.createElement("button");
-                    retryBtn.textContent = "Försök igen";
-
-                    retryBtn.addEventListener("click", function () {
-                        syncOfflineTodos();
-                    });
-
-                    li.appendChild(retryBtn);
-                }
-            } else {
-                span.textContent = displayText;
-            }
-
-            if (todo.completed) {
-                span.style.textDecoration = "line-through";
-                span.style.color = "gray";
-            }
-
-            // Expanderbar beskrivning
-            const detailsDiv = document.createElement("div");
-            detailsDiv.style.display = todo.expanded ? "block" : "none";
-            detailsDiv.style.marginLeft = "20px";
-            detailsDiv.style.marginTop = "5px";
-
-            const descriptionLabel = document.createElement("label");
-            descriptionLabel.textContent = "Beskrivning: ";
-
-            const descriptionInput = document.createElement("textarea");
-            descriptionInput.value = todo.description || "";
-            descriptionInput.rows = 3;
-            descriptionInput.style.width = "200px";
-
-            descriptionInput.addEventListener("change", async function() {
-                todo.description = descriptionInput.value;
-                try {
-                    await updateTodo(todo);
-                } catch (error) {
-                    console.error("Fel vid uppdatering:", error);
-                }
-            });
-
-            detailsDiv.appendChild(descriptionLabel);
-            detailsDiv.appendChild(descriptionInput);
-
-// Checklista
-            const checklistDiv = document.createElement("div");
-            checklistDiv.style.marginTop = "10px";
-
-            const checklistLabel = document.createElement("strong");
-            checklistLabel.textContent = "Checklista:";
-            checklistDiv.appendChild(checklistLabel);
-
-            const checklistUl = document.createElement("ul");
-            checklistUl.style.listStyle = "none";
-            checklistUl.style.paddingLeft = "0";
-
-            if (!todo.checklist) {
-                todo.checklist = [];
-            }
-
-            todo.checklist.forEach(function(item, itemIndex) {
-                const itemLi = document.createElement("li");
-
-                const itemCheckbox = document.createElement("input");
-                itemCheckbox.type = "checkbox";
-                itemCheckbox.checked = item.done;
-
-                itemCheckbox.addEventListener("change", async function() {
-                    todo.checklist[itemIndex].done = itemCheckbox.checked;
-                    try {
-                        await updateTodo(todo);
-                    } catch (error) {
-                        console.error("Fel vid uppdatering:", error);
-                    }
-                    render();
-                });
-
-                const itemText = document.createElement("span");
-                itemText.textContent = item.text;
-                if (item.done) {
-                    itemText.style.textDecoration = "line-through";
-                    itemText.style.color = "gray";
-                }
-
-                const removeItemBtn = document.createElement("button");
-                removeItemBtn.textContent = "X";
-                removeItemBtn.style.marginLeft = "5px";
-
-                removeItemBtn.addEventListener("click", async function() {
-                    todo.checklist.splice(itemIndex, 1);
-                    try {
-                        await updateTodo(todo);
-                    } catch (error) {
-                        console.error("Fel vid uppdatering:", error);
-                    }
-                    render();
-                });
-
-                itemLi.appendChild(itemCheckbox);
-                itemLi.appendChild(itemText);
-                itemLi.appendChild(removeItemBtn);
-                checklistUl.appendChild(itemLi);
-            });
-
-            checklistDiv.appendChild(checklistUl);
-
-// Lagg till ny punkt
-            const newItemInput = document.createElement("input");
-            newItemInput.type = "text";
-            newItemInput.placeholder = "Ny punkt...";
-
-            const addItemBtn = document.createElement("button");
-            addItemBtn.textContent = "Lagg till";
-
-            addItemBtn.addEventListener("click", async function() {
-                if (newItemInput.value === "") return;
-
-                todo.checklist.push({
-                    text: newItemInput.value,
-                    done: false
-                });
-
-                try {
-                    await updateTodo(todo);
-                } catch (error) {
-                    console.error("Fel vid uppdatering:", error);
-                }
-                render();
-            });
-
-            newItemInput.addEventListener("keydown", function(event) {
-                if (event.key === "Enter") {
-                    addItemBtn.click();
-                }
-            });
-
-            checklistDiv.appendChild(newItemInput);
-            checklistDiv.appendChild(addItemBtn);
-
-            detailsDiv.appendChild(checklistDiv);
-
-            span.addEventListener("click", function() {
-                todo.expanded = !todo.expanded;
-                render();
-            });
-
-            //editBtn
-            const editBtn = document.createElement("button");
-            editBtn.textContent = "Edit";
-            editBtn.addEventListener("click", function () {
-                todo.isEditing = true;
-                render();
-            });
-
-            //deleteBtn
-            const deleteBtn = document.createElement("button");
-            deleteBtn.textContent = "X";
-
-            deleteBtn.addEventListener("click", async function () {
-                try {
-                    await deleteTodo(todo.id);
-                } catch (error) {
-                    console.error("Fel vid borttagning:", error);
-                }
-                render();
-            })
-
-            li.appendChild(span);
-            li.appendChild(editBtn);
-            li.appendChild(deleteBtn);
-            li.appendChild(detailsDiv);
-        }
-        list.appendChild(li);
-    });
+    page = 0;
+    allTodosLoaded = false;
+    loadMoreTodos();
 }
 
 async function syncSingleOfflineTodo(queueItem) {
@@ -517,14 +568,14 @@ async function syncOfflineTodos() {
             );
 
             if (item.retries >= 3) {
-                console.error("Ger upp synk för:", item.payload.text);
+                console.error("Ger upp synk for:", item.payload.text);
             }
         }
     }
 
     saveOfflineQueue();
     saveTodosToCache(todos);
-    render();
+    resetAndRender();
 }
 
 function updateOnlineStatus() {
@@ -564,7 +615,7 @@ async function fetchTodosFromApi() {
 function loadTodosFromCache() {
     const cached = localStorage.getItem("todos-cache");
     if (!cached) {
-        throw new Error("Ingen cache tillgänglig");
+        throw new Error("Ingen cache tillganglig");
     }
 
     return JSON.parse(cached);
@@ -583,7 +634,7 @@ async function loadTodos() {
         const type = classifyError(error);
 
         if (type === "OFFLINE") {
-            errorMessage = "Du är offline. Visar sparad data.";
+            errorMessage = "Du ar offline. Visar sparad data.";
         } else if (type === "SERVER") {
             errorMessage = "Servern har problem. Visar sparad data.";
         } else {
@@ -595,7 +646,7 @@ async function loadTodos() {
 }
 
 async function putTodoToApi(todo) {
-    return await safeFetch(`/todos/${todo.id}`, {
+    return await safeFetch("/todos/" + todo.id, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json"
@@ -618,7 +669,7 @@ async function updateTodo(todo) {
 }
 
 async function deleteTodoFromApi(id) {
-    await safeFetch(`/todos/${id}`, {
+    await safeFetch("/todos/" + id, {
         method: "DELETE"
     });
 }
@@ -681,4 +732,3 @@ function saveUsername() {
 
 document.getElementById("saveUsernameBtn").addEventListener("click", saveUsername);
 displayUsername();
-
