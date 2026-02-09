@@ -86,6 +86,9 @@ function classifyError(error) {
     if (error.message === "INVALID_JSON") {
         return "DATA";
     }
+    if (error.message === "SW_FALLBACK") {
+        return "OFFLINE";
+    }
 
     return "UNKNOWN";
 }
@@ -549,7 +552,13 @@ function saveTodos() {
 }
 
 async function fetchTodosFromApi() {
-    return await safeFetch("/todos");
+    const data = await safeFetch("/todos");
+
+    if (data && data.fallback) {
+        throw new Error("SW_FALLBACK");
+    }
+
+    return data;
 }
 
 function loadTodosFromCache() {

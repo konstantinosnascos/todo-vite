@@ -1,32 +1,56 @@
 {
   "todos": [
     {
-      "id": "4be5",
-      "text": "Gå  ut med Oskar",
+      "id": "ac6f",
+      "text": "testar ny",
       "completed": false,
       "dueDate": null,
       "description": "",
       "checklist": []
     },
     {
-      "id": "4c64",
-      "text": "Gå ut med Oliver",
+      "id": "5290",
+      "text": "test",
       "completed": false,
       "dueDate": null,
       "description": "",
       "checklist": []
     },
     {
-      "id": "5d4c",
-      "text": "Gå ut med Ofelia",
+      "id": "14bc",
+      "text": "testar båda",
       "completed": false,
       "dueDate": null,
       "description": "",
       "checklist": []
     },
     {
-      "id": "bad0",
-      "text": "Plugga",
+      "id": "30ee",
+      "text": "test1",
+      "completed": false,
+      "dueDate": null,
+      "description": "",
+      "checklist": []
+    },
+    {
+      "id": "dcec",
+      "text": "test2",
+      "completed": false,
+      "dueDate": null,
+      "description": "",
+      "checklist": []
+    },
+    {
+      "id": "2bb6",
+      "text": "test11",
+      "completed": false,
+      "dueDate": null,
+      "description": "",
+      "checklist": []
+    },
+    {
+      "id": "e273",
+      "text": "test66",
       "completed": false,
       "dueDate": null,
       "description": "",
