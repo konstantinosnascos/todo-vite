@@ -15,7 +15,7 @@ let todos = [];
 
 // Pagination variabler
 let page = 0;
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 let allTodosLoaded = false;
 
 let input, addBtn, list;
