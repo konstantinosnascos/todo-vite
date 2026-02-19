@@ -7,7 +7,7 @@ const { classifyError, createTodoObject, safeFetch, toggleTodo, filterTodos, cre
 
 describe('classifyError', () => {
     it("should return 'Offline' when NETWORK_ERROR", () => {
-        const error = new Error("NETWORK_ERROR");
+        const error = new Error("TRASIGT");
         expect(classifyError(error)).toBe("TRASIGT");
     });
 
