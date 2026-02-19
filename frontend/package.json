@@ -4,13 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "../node_modules/.bin/vite",
-    "build": "../node_modules/.bin/vite build",
-    "preview": "../node_modules/.bin/vite preview",
-    "test": "../node_modules/.bin/vitest run",
-    "test:watch": "../node_modules/.bin/vitest",
-    "server": "../node_modules/.bin/json-server --watch db.json --port 3000",
-    "images": "node ../scripts/resize-images.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "server": "json-server --watch db.json --port 3000",
+    "images": "node scripts/resize-images.js"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
