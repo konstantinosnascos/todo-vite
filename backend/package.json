@@ -1,11 +1,8 @@
 {
-  "name": "json-server-custom",
+  "name": "backend",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "description": "json-server repo for basic customizations",
   "scripts": {
-    "dev": "node server.js",
     "start": "node server.js"
   },
   "dependencies": {
