@@ -1,0 +1,23 @@
+{
+  "name": "vite-todo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "../node_modules/.bin/vite",
+    "build": "../node_modules/.bin/vite build",
+    "preview": "../node_modules/.bin/vite preview",
+    "test": "../node_modules/.bin/vitest run",
+    "test:watch": "../node_modules/.bin/vitest",
+    "server": "../node_modules/.bin/json-server --watch db.json --port 3000",
+    "images": "node ../scripts/resize-images.js"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "jsdom": "^28.1.0",
+    "json-server": "^1.0.0-beta.5",
+    "sharp": "^0.33.5",
+    "vite": "^7.2.4",
+    "vitest": "^4.0.18"
+  }
+}

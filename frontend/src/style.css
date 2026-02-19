@@ -1,0 +1,278 @@
+/*style.css*/
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.todo-form {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+h1 {
+    color: #333;
+}
+
+#todoInput, #dueDateInput {
+    padding: 8px;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#todoInput {
+    width: 200px;
+}
+
+#addBtn {
+    padding: 8px 16px;
+    background-color: #053206;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#addBtn:hover {
+    background-color: #174319;
+}
+
+#todoList {
+    list-style: none;
+    padding: 0;
+    min-height: 300px;
+}
+
+#todoList li {
+    background-color: white;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#todoList li button {
+    padding: 4px 8px;
+    margin-left: 5px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#todoList li button:hover {
+    opacity: 0.8;
+}
+
+#userSection {
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+#userSection input, #userSection button {
+    padding: 6px;
+    border-radius: 4px;
+}
+
+textarea {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 5px;
+    display: block;
+    margin-top: 5px;
+}
+
+#offlineBanner {
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+#toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+#toolbar button {
+    padding: 8px 16px;
+    background-color: #103f65;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#toolbar button:hover {
+    background-color: #0c2237;
+}
+
+#toolbar button:disabled {
+    background-color: #90CAF9;
+    cursor: wait;
+}
+
+/* Statistik-vy */
+#statsContainer {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.stat-card {
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+
+.stat-card .stat-number {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: #131313;
+}
+
+.stat-card .stat-label {
+    display: block;
+    font-size: 12px;
+    color: #2e2d2d;
+    margin-top: 4px;
+}
+
+.stat-completed {
+    background-color: #E8F5E9;
+}
+
+.stat-completed .stat-number {
+    color: #245326;
+}
+
+.stat-pending {
+    background-color: #FFF3E0;
+}
+
+.stat-pending .stat-number {
+    color: #4c2f04;
+}
+
+.stat-overdue {
+    background-color: #FFEBEE;
+}
+
+.stat-overdue .stat-number {
+    color: #80241d;
+}
+
+.close-stats-btn, .close-settings-btn {
+    padding: 6px 12px;
+    background-color: #272727;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.close-stats-btn:hover, .close-settings-btn:hover {
+    background-color: #616161;
+}
+
+#settingsContainer {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.settings-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+.settings-form input {
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.settings-form button {
+    padding: 6px 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#settingsStatus {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+/* ===== BILDOPTIMERING ===== */
+
+.header-image {
+    width: 100%;
+    max-width: 800px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: block;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    background-color: #e0e0e0;
+    contain: layout;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.empty-state-image {
+    max-width: 200px;
+    height: auto;
+    opacity: 0.6;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

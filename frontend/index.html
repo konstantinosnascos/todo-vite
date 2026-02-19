@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="En todo-app byggd med Vite, vanilla JS och code splitting" />
+    <title>vite-todo</title>
+</head>
+<body>
+<div id="offlineBanner" style="display: none; background-color: orange; color: white; padding: 10px; text-align: center;" role="alert">
+    Offline-lage aktivt - sparar lokalt
+</div>
+<main>
+    <div id="userSection">
+        <span id="usernameDisplay"></span>
+    </div>
+
+    <h1>Todo</h1>
+
+    <picture>
+        <source
+                type="image/webp"
+                srcset="
+                    /src/images/IMG_6168-400.webp 400w,
+                    /src/images/IMG_6168-800.webp 800w,
+                    /src/images/IMG_6168-1200.webp 1200w
+                "
+                sizes="(max-width: 600px) 90vw, 800px"
+        />
+        <img
+                src="/src/images/IMG_6168-800.webp"
+                srcset="
+                    /src/images/IMG_6168-400.webp 400w,
+                    /src/images/IMG_6168-800.webp 800w,
+                    /src/images/IMG_6168-1200.webp 1200w
+                "
+                sizes="(max-width: 600px) 90vw, 800px"
+                alt="Todo-app illustration"
+                class="header-image"
+                width="800"
+                height="533"
+        />
+    </picture>
+
+    <div id="toolbar" style="margin-bottom: 20px;">
+        <button id="statsBtn">Statistik</button>
+        <button id="settingsBtn">Installningar</button>
+    </div>
+
+    <div id="statsContainer" style="display: none;"></div>
+    <div id="settingsContainer" style="display: none;"></div>
+    <div class="todo-form">
+        <label for="todoInput" class="sr-only">Skriv en todo</label>
+        <input id="todoInput" type="text" placeholder="Skriv en todo">
+
+        <label for="dueDateInput" class="sr-only">Valj datum</label>
+        <input id="dueDateInput" type="datetime-local">
+
+        <button id="addBtn">Lagg till</button>
+    </div>
+
+    <ul id="todoList" aria-label="Todo-lista"></ul>
+    <div id="load-trigger" style="height: 20px;"></div>
+</main>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
