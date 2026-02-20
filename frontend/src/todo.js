@@ -1,5 +1,7 @@
 //todo.js
 
+import { api } from "./api/index.js";
+
 let offlineQueue = [];
 
 function delay(ms) {
@@ -178,31 +180,6 @@ function classifyError(error) {
     return "UNKNOWN";
 }
 
-async function safeFetch(url, options = {}) {
-    let response;
-
-    try {
-        response = await fetch(url, options);
-    } catch (error) {
-        throw new Error("NETWORK_ERROR");
-    }
-
-    if (!response.ok) {
-        throw new Error("HTTP_ERROR_" + response.status);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("INVALID_JSON");
-    }
-
-    try {
-        return await response.json();
-    } catch {
-        throw new Error("INVALID_JSON");
-    }
-}
-
 function createTodoObject(text) {
     const dueDateInput = document.getElementById("dueDateInput");
 
@@ -216,13 +193,7 @@ function createTodoObject(text) {
 }
 
 async function postTodoToApi(todo) {
-    return await safeFetch("/todos", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(todo)
-    });
+    return await api.addTodo(todo);
 }
 
 function addTodoToState(todo) {
@@ -572,12 +543,10 @@ function saveTodos() {
 }
 
 async function fetchTodosFromApi() {
-    const data = await safeFetch("/todos");
-
+    const data = await api.getTodos();
     if (data && data.fallback) {
         throw new Error("SW_FALLBACK");
     }
-
     return data;
 }
 
@@ -615,13 +584,7 @@ async function loadTodos() {
 }
 
 async function putTodoToApi(todo) {
-    return await safeFetch("/todos/" + todo.id, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(todo)
-    });
+    return await api.updateTodo(todo);
 }
 
 function updateTodoInState(updatedTodo) {
@@ -638,9 +601,7 @@ async function updateTodo(todo) {
 }
 
 async function deleteTodoFromApi(id) {
-    await safeFetch("/todos/" + id, {
-        method: "DELETE"
-    });
+    await api.deleteTodo(id);
 }
 
 function removeTodoFromState(id) {
@@ -674,5 +635,5 @@ export function filterTodos(todos, mode) {
 }
 
 export const _testExports = {
-    classifyError, createTodoObject, safeFetch, filterTodos, toggleTodo, createTodoElement
+    classifyError, createTodoObject, filterTodos, toggleTodo, createTodoElement
 };
