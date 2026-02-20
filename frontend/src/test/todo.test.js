@@ -1,10 +1,10 @@
 //todo.test.js
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { _testExports} from "../todo.js";
+import { _testExports } from "../todo.js";
+import { createHttpApi } from "../api/httpApi.js";
 
-const { classifyError, createTodoObject, safeFetch, toggleTodo, filterTodos, createTodoElement } = _testExports;
-
+const { classifyError, createTodoObject, toggleTodo, filterTodos, createTodoElement } = _testExports;
 describe('classifyError', () => {
     it("should return 'Offline' when NETWORK_ERROR", () => {
         const error = new Error("UNKNOWN");
@@ -257,106 +257,168 @@ describe("createTodoElement", () => {
     });
 });
 
-describe("safeFetch", () => {
+describe("httpApi", () => {
+    let api;
 
     beforeEach(() => {
         vi.restoreAllMocks();
+        api = createHttpApi();
     });
 
-    it("should return data on successful response", async () => {
-        const fakeTodos = [
-            { id: 1, text: "Köp mjölk", completed: false },
-            { id: 2, text: "Städa", completed: true }
-        ];
+    describe("getTodos", () => {
+        it("should return todos on successful response", async () => {
+            const fakeTodos = [
+                { id: 1, text: "Köp mjölk", completed: false },
+                { id: 2, text: "Städa", completed: true },
+            ];
 
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            headers: {
-                get: () => "application/json"
-            },
-            json: () => Promise.resolve(fakeTodos)
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                headers: { get: () => "application/json" },
+                json: () => Promise.resolve(fakeTodos),
+            });
+
+            const result = await api.getTodos();
+
+            expect(result).toEqual(fakeTodos);
+            expect(fetch).toHaveBeenCalledWith(
+                expect.stringContaining("/todos"),
+                expect.any(Object)
+            );
         });
 
-        const result = await safeFetch("/todos");
+        it("should throw NETWORK_ERROR when fetch fails", async () => {
+            globalThis.fetch = vi
+                .fn()
+                .mockRejectedValue(new Error("Failed to fetch"));
 
-        expect(result).toEqual(fakeTodos);
-        expect(fetch).toHaveBeenCalledWith("/todos", {});
-    });
-    it("should throw NETWORK_ERROR when fetch fails", async () => {
-        globalThis.fetch = vi.fn().mockRejectedValue(
-            new Error("Failed to fetch")
-        );
-
-        await expect(safeFetch("/todos"))
-            .rejects.toThrow("NETWORK_ERROR");
-    });
-
-    it("should throw HTTP_ERROR when response is not ok", async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            status: 500
+            await expect(api.getTodos()).rejects.toThrow("NETWORK_ERROR");
         });
 
-        await expect(safeFetch("/todos"))
-            .rejects.toThrow("HTTP_ERROR_500");
-    });
+        it("should throw HTTP_ERROR when response is not ok", async () => {
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: false,
+                status: 500,
+            });
 
-    it("should throw HTTP_ERROR_404 for missing resource", async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            status: 404
+            await expect(api.getTodos()).rejects.toThrow("HTTP_ERROR_500");
         });
 
-        await expect(safeFetch("/todos/999"))
-            .rejects.toThrow("HTTP_ERROR_404");
-    });
+        it("should throw INVALID_JSON when content-type is wrong", async () => {
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                headers: { get: () => "text/html" },
+            });
 
-    it("should throw INVALID_JSON when content-type is wrong", async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            headers: {
-                get: () => "text/html"
-            }
+            await expect(api.getTodos()).rejects.toThrow("INVALID_JSON");
         });
 
-        await expect(safeFetch("/todos"))
-            .rejects.toThrow("INVALID_JSON");
-    });
+        it("should throw INVALID_JSON when json parsing fails", async () => {
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                headers: { get: () => "application/json" },
+                json: () => Promise.reject(new Error("bad json")),
+            });
 
-    it("should throw INVALID_JSON when json parsing fails", async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            headers: {
-                get: () => "application/json"
-            },
-            json: () => Promise.reject(new Error("bad json"))
+            await expect(api.getTodos()).rejects.toThrow("INVALID_JSON");
         });
-
-        await expect(safeFetch("/todos"))
-            .rejects.toThrow("INVALID_JSON");
     });
 
-    it("should pass method and headers for POST", async () => {
-        const newTodo = { text: "Ny todo", completed: false };
+    describe("addTodo", () => {
+        it("should POST and return the new todo", async () => {
+            const newTodo = { text: "Ny todo", completed: false };
+            const savedTodo = { id: 1, ...newTodo };
 
-        globalThis.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            headers: {
-                get: () => "application/json"
-            },
-            json: () => Promise.resolve({ id: 1, ...newTodo })
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                headers: { get: () => "application/json" },
+                json: () => Promise.resolve(savedTodo),
+            });
+
+            const result = await api.addTodo(newTodo);
+
+            expect(result).toEqual(savedTodo);
+            expect(fetch).toHaveBeenCalledWith(
+                expect.stringContaining("/todos"),
+                expect.objectContaining({
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(newTodo),
+                })
+            );
         });
 
-        await safeFetch("/todos", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newTodo)
+        it("should throw NETWORK_ERROR when offline", async () => {
+            globalThis.fetch = vi
+                .fn()
+                .mockRejectedValue(new Error("Failed to fetch"));
+
+            await expect(api.addTodo({ text: "Test" })).rejects.toThrow(
+                "NETWORK_ERROR"
+            );
+        });
+    });
+
+    describe("updateTodo", () => {
+        it("should PUT and return the updated todo", async () => {
+            const todo = { id: 1, text: "Uppdaterad", completed: true };
+
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                headers: { get: () => "application/json" },
+                json: () => Promise.resolve(todo),
+            });
+
+            const result = await api.updateTodo(todo);
+
+            expect(result).toEqual(todo);
+            expect(fetch).toHaveBeenCalledWith(
+                expect.stringContaining("/todos/1"),
+                expect.objectContaining({
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(todo),
+                })
+            );
         });
 
-        expect(fetch).toHaveBeenCalledWith("/todos", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newTodo)
+        it("should throw HTTP_ERROR_404 for missing todo", async () => {
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: false,
+                status: 404,
+            });
+
+            await expect(
+                api.updateTodo({ id: 999, text: "Finns ej" })
+            ).rejects.toThrow("HTTP_ERROR_404");
+        });
+    });
+
+    describe("deleteTodo", () => {
+        it("should DELETE the todo", async () => {
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                headers: { get: () => "application/json" },
+                json: () => Promise.resolve({}),
+            });
+
+            await api.deleteTodo(1);
+
+            expect(fetch).toHaveBeenCalledWith(
+                expect.stringContaining("/todos/1"),
+                expect.objectContaining({
+                    method: "DELETE",
+                })
+            );
+        });
+
+        it("should throw HTTP_ERROR_500 on server error", async () => {
+            globalThis.fetch = vi.fn().mockResolvedValue({
+                ok: false,
+                status: 500,
+            });
+
+            await expect(api.deleteTodo(1)).rejects.toThrow("HTTP_ERROR_500");
         });
     });
 });

@@ -1,31 +1,35 @@
 // integration.test.js
+//
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { _testExports } from "../todo.js";
+import { createHttpApi } from "../api/httpApi.js";
 
-const { safeFetch, createTodoElement, filterTodos } = _testExports;
+const { createTodoElement, filterTodos } = _testExports;
 
 describe("Integration: API → DOM", () => {
+    let api;
 
     beforeEach(() => {
         vi.restoreAllMocks();
+        api = createHttpApi();
     });
 
     it("should fetch todos and render them as list items", async () => {
         const fakeTodos = [
             { id: 1, text: "Handla", completed: false },
-            { id: 2, text: "Städa", completed: true }
+            { id: 2, text: "Städa", completed: true },
         ];
 
         globalThis.fetch = vi.fn().mockResolvedValue({
             ok: true,
             headers: { get: () => "application/json" },
-            json: () => Promise.resolve(fakeTodos)
+            json: () => Promise.resolve(fakeTodos),
         });
 
-        const todos = await safeFetch("/todos");
+        const todos = await api.getTodos();
 
         const ul = document.createElement("ul");
-        todos.forEach(todo => {
+        todos.forEach((todo) => {
             ul.appendChild(createTodoElement(todo));
         });
 
@@ -38,13 +42,13 @@ describe("Integration: API → DOM", () => {
         const allTodos = [
             { id: 1, text: "Klar", completed: true },
             { id: 2, text: "Inte klar", completed: false },
-            { id: 3, text: "Också klar", completed: true }
+            { id: 3, text: "Också klar", completed: true },
         ];
 
         const active = filterTodos(allTodos, "active");
 
         const ul = document.createElement("ul");
-        active.forEach(todo => {
+        active.forEach((todo) => {
             ul.appendChild(createTodoElement(todo));
         });
 
@@ -56,13 +60,13 @@ describe("Integration: API → DOM", () => {
     it("should handle API error gracefully", async () => {
         globalThis.fetch = vi.fn().mockResolvedValue({
             ok: false,
-            status: 500
+            status: 500,
         });
 
         const ul = document.createElement("ul");
 
         try {
-            await safeFetch("/todos");
+            await api.getTodos();
         } catch (error) {
             const li = document.createElement("li");
             li.textContent = "Kunde inte ladda todos";
